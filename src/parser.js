@@ -43,6 +43,7 @@ function Parser (_options) {
     rules: {}, // Markdown-It rules
     plugins: [], // Markdown-It plugins
     wrapper: 'section', // content wrapper
+    staticClass: '', // class for static content, in case of the style cascade in live content
     preProcess: null,
     afterProcess: null
   }
@@ -155,20 +156,25 @@ Parser.prototype.assembleLives = function () {
 }
 
 Parser.prototype.assembleLiveTemplates = function () {
-  let template = this.source
+  const staticClass = this.options.staticClass
+  const staticWrapperOpen = staticClass && `<div class="${staticClass}">`
+  const staticWrapperClose = staticClass && `</div>`
+  const template = []
+  let source = this.source
   for (let i = this.lives.length - 1; i >= 0; i--) {
     let live = this.lives[i]
     // Replace the original template with the created component and add refs
     let _template = `<${live._templateName} ref="${live._templateName}"/>`
-    // Insert component before it's live block
-    template =
-      template.slice(0, live.index) +
-      NEW_LINE + NEW_LINE +
-      _template +
-      NEW_LINE + NEW_LINE +
-      template.slice(live.index)
+    template.unshift(
+      _template,
+      staticWrapperOpen,
+      source.slice(live.index),
+      staticWrapperClose
+    )
+    source = source.slice(0, live.index)
   }
-  return template
+  template.unshift(staticWrapperOpen, source, staticWrapperClose)
+  return template.filter(p => p).join(`${NEW_LINE}${NEW_LINE}`)
 }
 
 Parser.prototype.assembleLiveStyles = function () {
